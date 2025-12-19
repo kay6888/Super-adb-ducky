@@ -1,0 +1,128 @@
+REM 🦄🐴 Wholesome Pwney Concuil Android Setup v1.0
+REM For Samsung Galaxy A16x
+REM This enables USB debugging and prepares for data extraction!!
+REM Requires: Device unlocked, trust this computer alert accepted
+
+DELAY 3000
+REM First, let's wake up the device if sleeping
+WAKE
+DELAY 1000
+
+REM Open Settings
+APP_SWITCH
+DELAY 500
+STRING settings
+DELAY 1000
+ENTER
+DELAY 2000
+
+REM Scroll to About Phone
+TAB
+TAB
+TAB
+TAB
+TAB
+DELAY 500
+ENTER
+DELAY 1000
+
+REM Tap Build Number 7 times to enable Developer Options!!
+REM First, find Software Information
+TAB
+TAB
+ENTER
+DELAY 1000
+
+REM Scroll to Build Number
+TAB
+TAB
+TAB
+TAB
+TAB
+TAB
+TAB
+DELAY 500
+
+REM Now tap tap tap like a happy pony!! 🦄
+REM Position cursor on Build Number
+ENTER
+DELAY 300
+ENTER
+DELAY 300
+ENTER
+DELAY 300
+ENTER
+DELAY 300
+ENTER
+DELAY 300
+ENTER
+DELAY 300
+ENTER
+DELAY 1000
+
+REM Go back and enable USB Debugging
+ESC
+DELAY 500
+ESC
+DELAY 500
+
+REM Now find Developer Options
+STRING developer
+DELAY 1000
+ENTER
+DELAY 1500
+
+REM Scroll to USB Debugging
+TAB
+TAB
+TAB
+TAB
+TAB
+DELAY 500
+ENTER
+DELAY 500
+
+REM Enable it!!
+TAB
+ENTER
+DELAY 1000
+
+REM Also enable Stay Awake and Disable ADB Authorization Timeout
+REM Scroll down more
+TAB
+TAB
+TAB
+TAB
+TAB
+DELAY 500
+
+REM Stay awake
+ENTER
+DELAY 500
+TAB
+ENTER
+DELAY 500
+
+REM Scroll to ADB Authorization
+STRING adb
+DELAY 1000
+TAB
+TAB
+TAB
+ENTER
+DELAY 500
+
+REM Set to "No timeout" or maximum
+TAB
+TAB
+ENTER
+DELAY 500
+
+REM Go back to home
+HOME
+DELAY 2000
+
+REM Now plug into computer and accept the RSA key!!
+REM This script pauses here for manual intervention
+REM STRING Trust this computer? Check "Always allow" and tap OK
+REM But we need human interaction for this part, friend!!
